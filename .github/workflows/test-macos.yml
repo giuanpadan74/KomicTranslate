@@ -17,12 +17,15 @@ on:
 
 jobs:
   test:
-    # macos-14 = ARM64 (M1, quello che hanno quasi tutti oggi).
-    # macos-15-intel = Intel x86_64 (per utenti con Mac vecchi).
+    # Solo ARM64 (M1+): torch/torchvision/paddle pubblicano wheel macOS
+    # SOLO arm64 (verificato su PyPI: torch 2.5.1 ha 4 wheel macosx_11_0_arm64,
+    # zero x86_64). Gli Intel non possono proprio installare torch moderno,
+    # quindi il job macos-15-intel falliva in 4s in risoluzione dipendenze.
+    # Gli Intel restano non supportati: decisione, non bug.
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15-intel]
+        os: [macos-14, macos-15]
     runs-on: ${{ matrix.os }}
 
     steps:
