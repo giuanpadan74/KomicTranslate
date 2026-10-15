@@ -19,10 +19,10 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -123,7 +123,7 @@ jobs:
           ls -lh dist/KomicTranslate-Setup.dmg
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           # Solo il DMG: l'.app e' gia' dentro il DMG, caricarla anche
           # separata raddoppiava il peso dell'artifact.
