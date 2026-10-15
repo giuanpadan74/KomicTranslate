@@ -1,0 +1,53 @@
+KomicTranslate - Installazione su macOS
+=======================================
+
+COSA FAI CON QUESTO DMG
+-----------------------
+Questo e' l'equivalente Mac del setup Windows (KomicTranslate-Setup.exe):
+installa KomicTranslate sul tuo Mac al PRIMO doppio click e poi lo avvia.
+Nei lanci successivi l'app si aprira' direttamente, senza reinstallare.
+
+NON serve aver gia' Python: viene usato il Python 3 di sistema
+(o lo installi tu con: brew install python@3.12).
+
+
+ISTRUZIONI
+----------
+1. Apri KomicTranslate-Setup.dmg (hai appena fatto doppio click).
+2. Trascina KomicTranslate-Setup.app in Applicazioni (o avviala da qui).
+3. PRIMA APERTURA: tasto destro (o ctrl+click) sull'app e scegli "Apri",
+   poi conferma con "Apri" nel dialogo.
+   - Necessario perche' l'app non e' notarizzata Apple (la notarizzazione
+     richiede un account Developer a pagamento). Da li' in poi l'avvio
+     funziona con doppio click normale.
+   - Se appare "app danneggiata", esegui da Terminale:
+       xattr -dr com.apple.quarantine /Applications/KomicTranslate-Setup.app
+4. Si apre la finestra di installazione: mostra requisiti, spazio su disco
+   e destinazione. Premi "Installa".
+5. Attendi 10-30 minuti: crea l'ambiente in
+       ~/Library/Application Support/KomicTranslate/
+   e installa torch + OCR (~4 GB). Non chiudere la finestra.
+6. Finito: KomicTranslate si avvia da solo.
+
+
+DOVE FINISCE L'INSTALLAZIONE
+----------------------------
+Applicazioni:    ~/Library/Application Support/KomicTranslate/app        (sorgenti)
+Ambiente:        ~/Library/Application Support/KomicTranslate/venv       (Python)
+Log:             ~/Library/Application Support/KomicTranslate/install.log
+Moduli DLL/OCR:  scaricati al primo uso in ~/.komictranslate/models
+
+Per rimuovere tutto: cancella ~/Library/Application Support/KomicTranslate.
+
+
+NOTE TECNICHE (se qualcosa non va)
+----------------------------------
+- Build non notarizzata: normale senza account Apple Developer. Vedi punto 3.
+- GPU: torch gira in CPU o su GPU Apple Silicon via MPS (le CUDA NVIDIA
+  non esistono su Mac). OCR Paddle potrebbe non installarsi su alcune
+  versioni di macOS: in quel caso resta attivo l'OCR doctr di ripiego e
+  l'app parte comunque.
+- Estensione Rust: le wheel precompilate sono solo per Windows, su Mac si
+  usa il fallback Python (funzionalita' identica, solo piu' lento).
+- Requisiti nel dettaglio: ~/.komictranslate/logs (log dell'app) e
+  install.log (log dell'installazione, utile per diagnosticare).

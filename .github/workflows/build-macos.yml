@@ -1,0 +1,132 @@
+name: build-macos
+
+# Build macOS: crea KomicTranslate-Setup.app + .dmg SENZA avere un Mac.
+# Equivalente di crea_setup.bat ma per Mac: stesso modello (payload.zip
+# embedded dentro l'installer, venv creato sul Mac dell'utente al primo
+# doppio click). Nessuna firma/notarizzazione Apple (richiede account
+# Developer a pagamento): l'app e' ad-hoc firmata per giraare sul proprio Mac.
+#
+# Trigger: manuale (workflow_dispatch) o tag v* (stessa convenzione di v1.0.0).
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    # ARM64: torch/paddle non pubblicano wheel x86_64 (vedi test-macos.yml).
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python info
+        run: |
+          python --version
+          python -c "import platform; print(platform.machine())"
+
+      - name: Install build tools
+        run: python -m pip install --upgrade pip wheel pyinstaller pillow
+
+      - name: Stage payload.zip
+        run: python installer/stage_payload.py build-macos/payload.zip
+
+      - name: Verify payload
+        run: |
+          python - <<'PY'
+          import zipfile, sys
+          z = zipfile.ZipFile("build-macos/payload.zip")
+          names = set(z.namelist())
+          for need in ("requirements-macos.txt", "comic.py",
+                       "installer/installer_macos.py", "LogoSetup.jpg",
+                       "assets/icons/komictranslate_icon.svg"):
+              if need not in names:
+                  sys.exit(f"payload incompleto: manca {need}")
+          print(f"payload OK: {len(names)} file")
+          PY
+
+      - name: Icona .icns da LogoSetup.jpg
+        run: |
+          set -euo pipefail
+          # iconset (16..512) con Pillow, poi iconutil fa l'.icns
+          mkdir -p icon.iconset
+          python - <<'PY'
+          from PIL import Image
+          im = Image.open("LogoSetup.jpg").convert("RGBA")
+          for size in (16, 32, 64, 128, 256, 512):
+              im.resize((size, size), Image.LANCZOS).save(f"icon.iconset/icon_{size}x{size}.png")
+              im.resize((size * 2, size * 2), Image.LANCZOS).save(f"icon.iconset/icon_{size}x{size}@2x.png")
+          PY
+          iconutil -c icns icon.iconset -o kt.icns
+          ls -lh kt.icns
+
+      - name: Build KomicTranslate-Setup.app
+        env:
+          PYTHONOPTIMIZE: "1"
+        run: |
+          set -euo pipefail
+          pyinstaller --noconfirm --clean --windowed \
+            --name KomicTranslate-Setup \
+            --icon kt.icns \
+            --osx-bundle-identifier com.comiclabs.komictranslate \
+            --add-data "build-macos/payload.zip:." \
+            installer/installer_macos.py
+
+      - name: Info.plist e icns dentro l'app
+        run: |
+          set -euo pipefail
+          # PyInstaller mette CFBundleIconFile solo se passi --icon: verifica
+          # esplicita, cosi' un icon mancante rompe la build e non il DMG.
+          PLIST="dist/KomicTranslate-Setup.app/Contents/Info.plist"
+          test -f "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST"
+          python - <<'PY'
+          import plistlib
+          p = plistlib.load(open("dist/KomicTranslate-Setup.app/Contents/Info.plist", "rb"))
+          p.setdefault("CFBundleName", "KomicTranslate")
+          p.setdefault("CFBundleDisplayName", "KomicTranslate Setup")
+          p.setdefault("NSHighResolutionCapable", True)
+          p.setdefault("LSMinimumSystemVersion", "13.0")
+          plistlib.dump(p, open("dist/KomicTranslate-Setup.app/Contents/Info.plist", "wb"))
+          print("plist aggiornato")
+          PY
+
+      - name: Firma ad-hoc
+        run: |
+          set -euo pipefail
+          # Senza firma Apple a pagamento si puo' solo firmare ad-hoc:
+          # sul Mac di prova serve "Apri dal menu contestuale" la prima volta.
+          codesign --force --deep --sign - dist/KomicTranslate-Setup.app
+          codesign --verify --verbose dist/KomicTranslate-Setup.app
+
+      - name: Self-test dell'app compilata
+        run: |
+          set -euo pipefail
+          # Esegue il binario dentro l'.app: valida payload incluso + percorsi.
+          ./dist/KomicTranslate-Setup.app/Contents/MacOS/KomicTranslate-Setup --self-test
+
+      - name: Crea DMG
+        run: |
+          set -euo pipefail
+          mkdir -p dmg-stage
+          cp -R dist/KomicTranslate-Setup.app dmg-stage/
+          cp installer/macos-leggimi.txt dmg-stage/LEGGIMI.txt
+          ln -s /Applications dmg-stage/Applications
+          hdiutil create -volname "KomicTranslate Setup" \
+            -srcfolder dmg-stage -ov -format UDZO dist/KomicTranslate-Setup.dmg
+          ls -lh dist/KomicTranslate-Setup.dmg
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KomicTranslate-Setup-macos
+          path: |
+            dist/KomicTranslate-Setup.dmg
+            dist/KomicTranslate-Setup.app
+          retention-days: 14
