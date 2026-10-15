@@ -41,10 +41,18 @@ jobs:
       - name: Install macOS deps
         timeout-minutes: 60
         run: |
+          # pipefail: senza questo, "pip ... | tee" maschera il fallimento di pip
+          # (exit code di tee) e lo step risulta verde anche se pip ha fallito.
+          set -o pipefail
           python -m pip install --upgrade pip wheel
-          # Log completo in caso di errore: l'output troncato di pip nasconde la causa.
-          # Se fallisce su paddlepaddle (noto su ARM), il log dice se e' solo quello.
-          pip install --prefer-binary -r requirements-macos.txt 2>&1 | tee install-macos.log
+          # Fase 1: tutto tranne paddle (paddlepaddle non ha wheel per ogni
+          # combo macOS/Python e da solo faceva fallire l'intero install,
+          # es. job Intel fallito in 6s con base import rotti).
+          grep -viE 'paddle' requirements-macos.txt > /tmp/req-base.txt
+          pip install --prefer-binary -r /tmp/req-base.txt 2>&1 | tee install-macos.log
+          # Fase 2: OCR Paddle, non fatale (fallback doctr se manca).
+          pip install --prefer-binary paddleocr paddlepaddle 2>&1 | tee -a install-macos.log \
+            || echo "::warning::paddle install fallito, proseguo senza PaddleOCR"
 
       - name: Verify base imports
         timeout-minutes: 10
