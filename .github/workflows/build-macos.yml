@@ -125,8 +125,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
+          # Solo il DMG: l'.app e' gia' dentro il DMG, caricarla anche
+          # separata raddoppiava il peso dell'artifact.
           name: KomicTranslate-Setup-macos
-          path: |
-            dist/KomicTranslate-Setup.dmg
-            dist/KomicTranslate-Setup.app
+          path: dist/KomicTranslate-Setup.dmg
           retention-days: 14
