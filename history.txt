@@ -1,0 +1,318 @@
+Dopo aver testato il progetto originale 'Comic Translate' di Ogkalu2
+https://github.com/ogkalu2/comic-translate/
+nasce l'esigenza di personalizzare il progetto per rendere le operazioni di OCR e traduzione meno onerose;
+ai tempi il progetto usava solo il modello ChatGPT e risultava molto caro
+Grazie ai nuovi sistemi di Vibe Coding come Windsurf di Codeium, e più recentemente il bellissimo Trae.ai con agente SOLO, inizio il fork....
+
+(modifiche in ordine inverso)
+
+13 ottobre 2026
+- convertiti alcuni moduli in Rust 
+- procedura install ora guarda GPU sì/no
+
+12 ottobre 2026
+- aggiungo min max font size nella barra laterale destra
+- sistemato prompt per la traduzione
+- Originale sovrapposto anzichè popup
+
+9 ottobre 2026
+- aggiunto l'ordine per i marcatori
+
+7 ottobre 2026
+- aggiunto Scheda Fumetto per editing comicinfo.xml
+- migliorato riferimento poligonale (rosa) per painting
+
+5 ottobre 2026
+- eliminate tutte le LLM online
+- aggiunto pulsante 'seleziona tutte le caselle'
+
+30 agosto 2026
+- aggiunto pulsante 'Nascondi/Mostra caselle di testo'
+
+28 agosto 2026
+- riconosce il colore del font nei baloons
+- aggiunto prompt a GVB
+
+04 agosto 2026
+- sistemato .ctpr multipagina
+- sistemata l'individuazione del baloon (sfondo azzurro) solo bordo
+
+13 luglio 2026
+- in modalità rileva la figura di base è poligono, non più rettangolo
+
+7 luglio 2026
+- risolto bug 'canc' ritardato
+- Rileva tutto ora esegue già OCR e se flag 'pre-OCR filtro' è selezionato esclude caselle di testo vuote e numeri pagina (da testare bene)
+- centratura automatica a fine render
+
+2 luglio 2026
+- escludo numero pagina da 'Detect'
+-  miglioramento 'Detect' in generale per falsi positivi
+
+25 giugno 2026
+- aggiunto pulsante commutazione poligono|rettangolo per inpainting
+- pulsante CANC e BACKSPACE cancellano le caselle di testo
+- eliminato 'disegni' , facciamo tutto con .svg
+- migliorata gestione .svg
+
+22 giugno 2026
+- spostamento caselle di testo fluido
+- spostamento caselle anche con tasti frecce
+- bug casella target fix
+- valori persistenti di Painting
+
+15 giugno 2026
+- salva senza caselle di testo, poligoni e marcatori
+- flag per salvataggio multi-immagine
+- sistemato bug source e target su multi-immagine
+
+09 giugno 2026
+- migliorato painting, ora non tocca caselle di testo
+- pentagono per distribuire testo nel baloon
+- sistemata UI x 1920x1080 (schermi FULL HD)
+
+04 giugno 2026
+- tolto Lampeggia (ora ci sono Marcatori)
+- aggiunto gestione poligoni
+
+03 giugno 2026
+- fix pulsante 'Invia' in TXT mode
+
+02 giugno 2026
+- aggiornato PyTorch per lavorare con GPU
+- aggiunto aya, qwen e deepseek come traduttori offline per GPU
+- sistemati i marcatori
+
+28 maggio 2026
+- aggiunto pulsante 'La Traduzione' con relativo modale per traduzione globale
+- aggiunti marcatori numerici per individuare falsi "text box"
+
+27 maggio 2026
+- aggiunti dropdown in home
+
+26 maggio 2026
+- nuova barra laterale GVB
+
+16 Maggio 2026
+- quando salva togli eventuali caselle di testo selezionate
+
+05 maggio 2026
+- aggiunti pulsanti per navigazione immagine
+- controllo freeze post selezione casella di testo con GPT 4.4
+- rilevamento poligonale nei baloons
+
+26 aprile 2026
+- bug virgolette "" nel testo: risolto
+
+23 aprile 2026
+- fix traduzione multipagina
+- aggiunto salvataggio multipagina
+- risolto bug del mancato invio del testo da gemini.google.com
+
+22 aprile 2026
+- la procedura aspetta che sia presente il pulsante OK in gemini.google.com prima di copiare la traduzione
+
+21 aprile 2026
+- ritenta due volte se traduzione non comprende tutti i blocchi
+
+20 aprile 2026
+- risolto piccolo bug su esportazione json
+
+17 aprile 2026
+- TXT IN | TXT OUT semi-automatico
+- rafforzato outpur in json mode
+
+16 aprile 2026
+- aggiunto nuovo OCR offline : PP-OCRv5
+
+15 aprile 2026
+- rimosso OCR+C
+
+09 aprile 2026
+- aggiunto pulsante 'forma predefinita rileva' quadrato/ellisse in impostazioni|strumenti
+- toggle ellisse/rettangolo aggiustato
+
+07 aprile 2026
+- ora Rileva utilizza la selezione ellittica di default
+- nuovo pulsante per cambiare da ellittica a vecchia rettangolare
+serve per evitare che crei punti di segmentazione fuori dalle nuvole
+
+24 marzo
+- ripristinato il pulsante 'Annulla' per interrompere i batch
+
+23 marzo
+- nuovo nome: Komic Translate
+- risolto bug colori di 'Secchiello'
+
+22 marzo 2026
+- spezzattati file codice troppo grandi
+
+15 marzo 2026
+- aggiunto metodo 'fast clean' in inpainting
+
+12 marzo 2026
+- smart batching per evitare troncamento su json lunghi
+- Gestione modelli riporta il numero massimo di token per ogni LLM in output per la traduzione
+
+11 marzo 2026
+- risolto bug crezione json su testi lunghi
+
+10 marzo 2026
+- tolto salvataggio BLK_LIST che bloccava programma a fine Detect, lo fa già Traduci (Tutto)
+
+09 marzo 2026
+- ridotto a due tentativi Geminiamo con popup per cambiare LLM
+- ora la procedura batch Traduci (Tutto) funziona anche senza passare l'immagine al traduttore (risparmio tempo)
+
+07 marzo 2026
+- effetto lampeggia su caselle di testo rilevate
+- pulsanti bold, corsivo, sottolineato, allinea dx, sx, centrato permanenti solo con doppio click, se no temporanei
+- varia dimensione testo anche nel dropdown quando alzo/abbasso casella di testo
+
+04 marzo 2006 #important update
+- sistemato geminiamo cookies
+
+03 marzo 2026 #Major Update
+- introdotto OCR e traduzione senza api key con 'geminiamo' usa gemini.google.com
+- aggiunti pulsanti Rileva (Tutto) e OCR (tutto) per lavorare in multipagina
+- implementato metodo 'collage' anche per geminiOCR (non geminiamo) per risparmiare tokens
+
+02 marzo 2026 #minority update
+- aggiunto pulsante 'giustificato' per il testo in paragrafo
+
+26 febbraio #middle update
+- aggiunto strumento aggiungi forma chiusa: rettangolo, ellisse (PNG)
+
+16 febbraio #middle update
+- sistemata 'sposta casella di testo' prima difficilmente selezionabile su una riga
+- aggiunte shortcut
+
+13 febbraio #middle update
+- nuova barra laterale: separato pennell da Inpainting, nuovo stumento secchiello ...
+- nuova sezione Tooltip in Impostazioni per assegnazione combinazione rapide alle azioni
+
+12 febbraio #minor update
+- aggiunti campi risoluzione per inpainting
+
+11 febbraio #middle update
+- sistemata barra paint per .svg (colore bordo, sfondo, dimensioni) 
+
+9 febbraio 2026 #minor update
+- aggiunto Source -> Target per clonare testo rilevato in target; può servire quando testo originale troppo piccolo
+
+25 gennaio 2026 #middle update
+- aggiunto TXT IN e TXT OUT per la traduzione in "esterno" con Gemini chat o ChatGPT
+
+28 novembre 2025
+- Rileva caselle di testo + traduci ora funziona anche con più pagine
+
+27 novembre 2025
+- risolto bug OCR con Gemini 2.5 flash
+
+25 novembre 2025
+- introdotta modalità semiautomatica: rileva caselle di testo + traduci (automatico) batch
+
+13 ottobre 2025
+- un errore di regex non permetteva il render
+
+17 settembre 2025
+- sistemato pulsante 'Original' ora va anche con più immagini
+- sistema la bordatura dei tasti
+- Model Management: rivista la modalità per individuare i modelli dai provider, migliorata
+
+10 settembre 2025
+Ora sia Sbianchetta che Translate batch aggiornano correttamente l'UI con le immagini pulite RGB, eliminando il problema di visualizzazione BGR durante il processo di traduzione.
+
+09 settembre 2025
+- livelli layer per testo immagine ecc.: ora la scritta appare sempre come layer + alto e Penna rimane sotto
+- corretti i pulsanti 'Porta in secondo piano'  e 'Porta in primo piano' : ora agiscono su tutte le forme tranne sfondo e penna
+
+06 settembre 2025
+- rotazione api key anche di Qwen OCR e Traduzione
+- sistemato quota manager
+- Save As (per progetti .ctpr) ricorda cartella e nome originale
+
+05 settembre 2025
+- risolto bug che non chiudeva barra in modalità batch
+- aggiunta funzione batch per sbianchettare i baloons
+
+04 settembre 2025
+- aggiunto sistema multi api key
+- implementazione rotazione api key
+
+03 settembre 2025
+- sistemato Canvas Strumenti: ora le immagini .svg possono essere allargate e alzate, sistemati i tasti
+
+02 settembre 2025
+- aggiunto 'Fast Clean' sperimentale: dovrebbe cancellare testo nei baloons con gemini-2.5-flash-image-preview
+
+17 agosto 2025
+- Canvas Strumenti: seleziona file SVG per l'inserimento dei baloon (versione alpha)
+- ingoblato Watermark tra .svg dei baloons
+
+14 agosto 2025
+- gemini bug fix
+- suono dopo ogni operazione
+- sistemato Canvas Strumenti
+- inserimento nuovo strumento Baloons
+
+13 agosto 2025
+- nuovo strumento "PENNA"
+
+11 agosto 2025
+- BUG la modalità Automatica fa casino con TARGET e SOURCE
+- In target si possono togliere tutti gli "a capo"
+- compattato barra strumenti destra
+- inserita la selezione multipla dei text boxes
+
+10 agosto 2025
+- Aggiunto pulsante History che mostra questo file, reso editabile per l'admin
+
+09 agosto 2025
+- Sync & Check Models
+- ordine alfabetico dei modelli trovati		
+- aggiunto GPT5
+- modificato procedura per l'individuazione del modello come multimodale e vision (controllo su GPT* anzichè GPT4*)
+
+08 agosto 2025
+- aggiunta la bordatura ai pulsanti 'Rileva caselle di testo', 'OCR' ecc. per rendere evidente l'avanzamento lavori
+
+07 agosto 2025
+- corretta la centratura del testo nel baloon in fase di rendering
+
+06 agosto 2025
+- Aggiunto il pulsante 'OCR+C' che oltre che riconosce il testo, memorizza anche il colore del testo; molto utile per pagine con didascalie nere e testo bianco ecc.
+
+05 agosto 2025
+- Aggiunto 'Detect Font' per il riconoscimento del tipo di font in un baloon
+
+16 luglio 2025
+- Gemini come OCR e Traduttore, economico e molto efficente
+
+15 luglio 2025
+- Sync & Check Models
+- ora tutti i modelli AI sono dinamici con la possibilità di aggiungere sempre di nuovi; la procedura riconosce da sola il tipo di modello: OCR, Traduzione, chat e popola i dropdown in Selezione modello
+
+17 giugno 2025
+- Introdotto il salvataggio del PDF 'vettoriale' immagine in un livello, testo nell'altro
+
+12 giugno 2025
+- Modificato e ottimizzato il salvataggio .CTPR (progetto)
+
+19 aprile 2025
+- Finalmente Qwen è diventato  un modello illimitato
+
+16 marzo 2025
+- Aggiunti gli strumenti 'Watermark' per caricare un watermark sulla pagina
+
+15 marzo 2025
+- Aggiunto pulsante 'Original' per mostrare l'immagine originale
+
+11 marzo 2025
+- Aggiunti comandi Canvas per disegnare rettangolo, ellisse ecc.
+
+07 marzo 2025
+- Aggiunto Qwen tra i modelli AI per OCR 
+
+That's all folks!!
+GiuanPadan

@@ -1,0 +1,76 @@
+# KomicTranslate - dipendenze runtime, variante macOS (ARM + Intel)
+#
+# Derivata da requirements-cpu.txt con queste differenze:
+#   - NESSUN extra-index CUDA, NESSUN suffisso +cu121 (torch da PyPI standard,
+#     su Mac usa CPU/MPS, mai CUDA/NVIDIA).
+#   - Aggiunti pyobjc-framework-Cocoa/WebKit con marker sys_platform=="darwin":
+#     servono a pywebview su macOS (WebKit nativo). Su Windows/Linux pip li
+#     ignora grazie ai marker, quindi il file resta installabile ovunque ma
+#     e' pensato per il test/build Mac.
+#   - paddlepaddle invariato (stesso nome su PyPI). E' il pacchetto piu' a
+#     rischio su macOS ARM: se pip fallisce qui, il resto della suite resta
+#     valido e l'OCR Paddle va disabilitato con fallback doctr.
+# La wheel in wheels/komic_core_rs-*-win_amd64.whl NON va installata su Mac:
+# l'installer la salta (fallback Python puro), vedi installer/installer_exe.py.
+#
+# Uso in CI (GitHub Actions, runner macos-14 / macos-15-intel):
+#   pip install -r requirements-macos.txt
+
+# Core Framework
+PySide6>=6.8.0
+six>=1.16.0
+dayu-path>=0.5.2
+
+# Computer Vision & Image Processing
+opencv_python
+numpy>=1.24.0,<2.4.0
+onnxruntime>=1.20.0
+Pillow>=9.0.0
+torch==2.5.1
+torchvision==0.20.1
+ultralytics<=8.3.40
+
+# OCR & Text Recognition
+paddleocr>=2.8.1
+paddlepaddle
+python-doctr[torch]>=0.11.0
+transformers>=4.36.2
+tokenizers
+sentencepiece
+pyclipper
+shapely
+jaconv>=0.3.4
+
+# Inpainting
+pydantic
+
+# Text segmentation CJK (import lazy in translator_utils.format_translations)
+stanza>=1.7.0
+
+# Clustering colori testo
+scikit-learn>=1.3.0
+
+# Geminiamo (unico engine online rimasto: cookie Firefox, niente API key)
+gemini_webapi
+
+# File Handling & Archives
+py7zr>=0.20.8
+rarfile>=4.1
+img2pdf>=0.5.1
+pdfplumber>=0.11.5
+
+# Browser automation (Gemini/Dola via webview)
+pywebview>=5.0.0
+# Dipendenze WebKit native, solo macOS (marker: ignorate altrove)
+pyobjc-framework-Cocoa>=10.0; sys_platform=="darwin"
+pyobjc-framework-WebKit>=10.0; sys_platform=="darwin"
+
+# Utilities
+requests>=2.31.0
+msgpack>=1.1.0
+wget>=3.2
+loguru>=0.7.2
+largestinteriorrectangle>=0.2.0
+
+# PDF Generation
+reportlab>=4.0.0

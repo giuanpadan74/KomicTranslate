@@ -1,0 +1,178 @@
+{
+  "last_updated": "2026-06-16T18:41:51.285376",
+  "providers": {
+    "openai": {
+      "models": [],
+      "last_sync": "2026-06-16T18:41:51.285376"
+    },
+    "anthropic": {
+      "models": [],
+      "last_sync": "2026-06-16T18:41:51.285376"
+    },
+    "google": {
+      "models": [],
+      "last_sync": "2026-06-16T18:41:51.285376"
+    },
+    "deepseek": {
+      "models": [],
+      "last_sync": "2026-06-16T18:41:51.285376"
+    },
+    "alibaba": {
+      "models": [],
+      "last_sync": "2026-06-16T18:41:51.285376"
+    },
+    "deepl": {
+      "models": [],
+      "last_sync": "2026-06-16T18:41:51.285376"
+    },
+    "cerebras": {
+      "models": [],
+      "last_sync": "2026-06-16T18:41:51.285376"
+    },
+    "ollama": {
+      "models": [],
+      "last_sync": "2026-06-16T18:41:51.285376"
+    }
+  },
+  "search_results": {
+    "new_models": [
+      {
+        "api_name": "llama-3.3-70b",
+        "name": "Llama 3.3 70B",
+        "description": "API key Cerebras mancante",
+        "context_length": 8192,
+        "capabilities": [
+          "chat",
+          "translation"
+        ],
+        "status": "missing_api_key",
+        "pricing": {},
+        "suggested_name": "llama-3.3-70b",
+        "provider": "cerebras",
+        "compatibility": {
+          "ocr": false,
+          "translation": true
+        }
+      }
+    ],
+    "updated_models": [
+      {
+        "id": "deepseek-r1:14b",
+        "name": "deepseek-r1:14b",
+        "api_name": "deepseek-r1:14b",
+        "current_context": 32768,
+        "new_context": 8192,
+        "current_pricing": {},
+        "new_pricing": {
+          "prompt": "0",
+          "completion": "0"
+        },
+        "compatibility": {
+          "ocr": false,
+          "translation": true
+        }
+      }
+    ],
+    "deprecated_models": [],
+    "provider_details": {
+      "openai": {
+        "new_models": [],
+        "updated_models": [],
+        "deprecated_models": [],
+        "status": "api_error"
+      },
+      "anthropic": {
+        "new_models": [],
+        "updated_models": [],
+        "deprecated_models": [],
+        "status": "api_error"
+      },
+      "google": {
+        "new_models": [],
+        "updated_models": [],
+        "deprecated_models": [],
+        "status": "api_error"
+      },
+      "deepseek": {
+        "new_models": [],
+        "updated_models": [],
+        "deprecated_models": [],
+        "status": "api_error"
+      },
+      "alibaba": {
+        "new_models": [],
+        "updated_models": [],
+        "deprecated_models": [],
+        "status": "api_error"
+      },
+      "deepl": {
+        "new_models": [],
+        "updated_models": [],
+        "deprecated_models": [],
+        "status": "api_error"
+      },
+      "cerebras": {
+        "new_models": [
+          {
+            "api_name": "llama-3.3-70b",
+            "name": "Llama 3.3 70B",
+            "description": "API key Cerebras mancante",
+            "context_length": 8192,
+            "capabilities": [
+              "chat",
+              "translation"
+            ],
+            "status": "missing_api_key",
+            "pricing": {},
+            "suggested_name": "llama-3.3-70b",
+            "provider": "cerebras",
+            "compatibility": {
+              "ocr": false,
+              "translation": true
+            }
+          }
+        ],
+        "updated_models": [],
+        "deprecated_models": [],
+        "status": "success"
+      },
+      "ollama": {
+        "new_models": [],
+        "updated_models": [
+          {
+            "id": "deepseek-r1:14b",
+            "name": "deepseek-r1:14b",
+            "api_name": "deepseek-r1:14b",
+            "current_context": 32768,
+            "new_context": 8192,
+            "current_pricing": {},
+            "new_pricing": {
+              "prompt": "0",
+              "completion": "0"
+            },
+            "compatibility": {
+              "ocr": false,
+              "translation": true
+            }
+          }
+        ],
+        "deprecated_models": [],
+        "status": "success"
+      }
+    },
+    "compatibility_analysis": {
+      "ocr_models": [],
+      "translation_models": [],
+      "provider_analysis": {
+        "cerebras": {
+          "total_models": 1,
+          "ocr_capable": 0,
+          "translation_capable": 1,
+          "models": [
+            "llama-3.3-70b"
+          ]
+        }
+      }
+    }
+  }
+}

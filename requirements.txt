@@ -1,0 +1,83 @@
+# KomicTranslate - dipendenze runtime curate (2026-10-06)
+#
+# Regola: qui dentro solo pacchetti IMPORTATI dal codice in app/, modules/,
+# comic.py, controller.py, pipeline.py. Verificato con scansione statica degli
+# import (anche quelli lazy dentro le funzioni).
+# Le dipendenze transitive (es. scipy via sklearn, safetensors via
+# transformers, rookiepy via gemini_webapi) le risolve pip da sole.
+#
+# RIMOSSI rispetto al file autogenerato del 2025-12-16 (mai importati):
+#   easyocr (morto: modules/ocr/easy_ocr.py non e' referenziato da nessuno),
+#   openai, anthropic, google-generativeai, cerebras-cloud-sdk (strato LLM
+#   rimosso; restano solo commenti/stringhe nei messaggi),
+#   deepl, deep-translator (solo stringhe nei messaggi d'errore),
+#   fugashi, unidic-lite (gia' marcati UNUSED), setuptools (solo build-time),
+#   psutil (nessun import nel progetto), rookiepy (transitiva di gemini_webapi).
+# AGGIUNTI (importati ma mancavano): pydantic, shapely, pyclipper,
+#   tokenizers, sentencepiece, paddlepaddle (esplicito per controllo flavor).
+#
+# FLAVOR GPU/CPU: questo file e' la variante CUDA. Per la build solo-CPU:
+#   - togliere la riga --extra-index-url qui sotto
+#   - torch==2.5.1+cu121 -> torch==2.5.1 (da index PyPI standard)
+#   - torchvision==0.20.1+cu121 -> torchvision==0.20.1
+#   - paddlepaddle -> paddlepaddle (build CPU, stesso nome su PyPI)
+# I due installer (_CUDA/_CPU) nascono da queste due varianti.
+
+# CUDA Support (NVIDIA GPUs) - SOLO variante CUDA
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+# Core Framework
+PySide6>=6.8.0
+six>=1.16.0
+dayu-path>=0.5.2
+
+# Computer Vision & Image Processing
+opencv_python
+numpy>=1.24.0,<2.4.0
+onnxruntime>=1.20.0
+Pillow>=9.0.0
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+ultralytics<=8.3.40
+
+# OCR & Text Recognition
+paddleocr>=2.8.1
+paddlepaddle
+python-doctr[torch]>=0.11.0
+transformers>=4.36.2
+tokenizers
+sentencepiece
+pyclipper
+shapely
+jaconv>=0.3.4
+
+# Inpainting
+pydantic
+
+# Text segmentation CJK (import lazy in translator_utils.format_translations)
+stanza>=1.7.0
+
+# Clustering colori testo
+scikit-learn>=1.3.0
+
+# Geminiamo (unico engine online rimasto: cookie Firefox, niente API key)
+gemini_webapi
+
+# File Handling & Archives
+py7zr>=0.20.8
+rarfile>=4.1
+img2pdf>=0.5.1
+pdfplumber>=0.11.5
+
+# Browser automation (Gemini/Dola via webview)
+pywebview>=5.0.0
+
+# Utilities
+requests>=2.31.0
+msgpack>=1.1.0
+wget>=3.2
+loguru>=0.7.2
+largestinteriorrectangle>=0.2.0
+
+# PDF Generation
+reportlab>=4.0.0

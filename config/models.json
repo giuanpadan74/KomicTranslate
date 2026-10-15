@@ -1,0 +1,78 @@
+{
+  "models": {
+    "PP-OCRv5": {
+      "api_name": "PP-OCRv5",
+      "provider": "local",
+      "status": "active",
+      "description": "PP-OCRv5 - OCR locale",
+      "capabilities": [
+        "ocr",
+        "vision",
+        "multimodal"
+      ],
+      "context_length": 1024
+    },
+    "MangaOCR": {
+      "api_name": "MangaOCR",
+      "provider": "local",
+      "status": "active",
+      "description": "MangaOCR - OCR locale per fumetti giapponesi",
+      "capabilities": [
+        "ocr",
+        "vision",
+        "multimodal"
+      ],
+      "context_length": 1024
+    },
+    "LaMa": {
+      "api_name": "LaMa",
+      "provider": "local",
+      "status": "active",
+      "description": "LaMa - Inpainting locale",
+      "capabilities": [
+        "inpainting",
+        "image_editing"
+      ],
+      "context_length": 1024
+    },
+    "AOT": {
+      "api_name": "AOT",
+      "provider": "local",
+      "status": "active",
+      "description": "AOT - Inpainting locale",
+      "capabilities": [
+        "inpainting",
+        "image_editing"
+      ],
+      "context_length": 1024
+    },
+    "MI-GAN": {
+      "api_name": "MI-GAN",
+      "provider": "local",
+      "status": "active",
+      "description": "MI-GAN - Inpainting locale",
+      "capabilities": [
+        "inpainting",
+        "image_editing"
+      ],
+      "context_length": 1024
+    },
+    "geminiamo": {
+      "api_name": "geminiamo",
+      "provider": "geminiamo",
+      "status": "active",
+      "description": "Geminiamo - Free Gemini integration via browser cookies",
+      "capabilities": [
+        "ocr",
+        "translation",
+        "chat",
+        "vision",
+        "multimodal"
+      ],
+      "context_length": 8192
+    }
+  },
+  "metadata": {
+    "last_updated": "2026-10-05"
+  }
+}

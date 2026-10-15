@@ -1,0 +1,77 @@
+name: test-macos
+
+# Verifica che KomicTranslate si installi e importi su Mac senza avere un Mac.
+# Avvio manuale da Actions, oppure a ogni push che tocca dipendenze/codice core.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "requirements-macos.txt"
+      - "requirements-cpu.txt"
+      - "comic.py"
+      - "controller.py"
+      - "pipeline.py"
+      - "app/**"
+      - "modules/**"
+      - ".github/workflows/test-macos.yml"
+
+jobs:
+  test:
+    # macos-14 = ARM64 (M1, quello che hanno quasi tutti oggi).
+    # macos-15-intel = Intel x86_64 (per utenti con Mac vecchi).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python info
+        run: |
+          python --version
+          python -c "import platform; print(platform.platform()); print(platform.machine())"
+
+      - name: Install macOS deps
+        timeout-minutes: 60
+        run: |
+          python -m pip install --upgrade pip wheel
+          # Log completo in caso di errore: l'output troncato di pip nasconde la causa.
+          # Se fallisce su paddlepaddle (noto su ARM), il log dice se e' solo quello.
+          pip install --prefer-binary -r requirements-macos.txt 2>&1 | tee install-macos.log
+
+      - name: Verify base imports
+        timeout-minutes: 10
+        run: |
+          python -c "import PySide6, PIL, numpy, cv2; print('base OK')"
+          python -c "import torch; print('torch', torch.__version__)"
+          python -c "import py7zr; print('7z OK')"
+
+      - name: Verify OCR imports (non fatale)
+        timeout-minutes: 10
+        continue-on-error: true
+        run: |
+          python -c "import paddleocr; print('paddleocr OK')" 2>&1 | tail -20
+          python -c "import doctr; print('doctr OK')" 2>&1 | tail -5
+
+      - name: Compile entry point
+        run: python -m py_compile comic.py controller.py pipeline.py
+
+      - name: Qt offscreen smoke test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -c "from PySide6.QtWidgets import QApplication; app = QApplication([]); print('Qt offscreen OK')"
+
+      - name: Upload install log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-log-${{ matrix.os }}
+          path: install-macos.log

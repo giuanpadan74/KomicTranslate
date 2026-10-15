@@ -1,0 +1,739 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+###################################################################
+# Author: Mu yanru
+# Date  : 2019.2
+# Email : muyanru345@163.com
+###################################################################
+"""
+MClickBrowserFilePushButton, MClickBrowserFileToolButton
+MClickBrowserFolderPushButton, MClickBrowserFolderToolButton
+Browser files or folders by selecting.
+
+MDragFileButton, MDragFolderButton
+Browser files or folders by dragging.
+"""
+# Import future modules
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+# Import built-in modules
+import os
+
+# Import third-party modules
+from PySide6 import QtCore
+from PySide6 import QtWidgets
+import six
+
+# Import local modules
+from . import dayu_theme
+from .mixin import cursor_mixin
+from .mixin import property_mixin
+from .push_button import MPushButton
+from .tool_button import MToolButton
+
+SETTINGS_ORG = "ComicLabs"
+SETTINGS_APP = "KomicTranslate"
+LAST_OPEN_DIR_KEY = "last_open_directory"
+LAST_OPEN_FILE_KEY = "last_open_file"
+
+
+def get_last_open_directory(fallback=None):
+    """Restituisce l'ultima cartella aperta, persistita tra i riavvii via QSettings."""
+    try:
+        settings = QtCore.QSettings(SETTINGS_ORG, SETTINGS_APP)
+        last_dir = settings.value(LAST_OPEN_DIR_KEY, "")
+        if last_dir and isinstance(last_dir, str) and os.path.isdir(last_dir):
+            return last_dir
+    except Exception:
+        pass
+    if fallback and isinstance(fallback, str) and os.path.isdir(fallback):
+        return fallback
+    return os.path.expanduser("~")
+
+
+def remember_last_open_path(path):
+    """Memorizza ultima cartella/file aperto in QSettings per proporla al prossimo load."""
+    try:
+        if isinstance(path, (list, tuple)):
+            if not path:
+                return
+            path = path[0]
+        if not path or not isinstance(path, str):
+            return
+        if os.path.isfile(path):
+            directory = os.path.dirname(path) or os.path.expanduser("~")
+            file_value = path
+        elif os.path.isdir(path):
+            directory = path
+            file_value = ""
+        else:
+            # Path non ancora esistente (es. drag&drop con nomi strani):
+            # prova a derivare la directory dal parent se esiste.
+            parent = os.path.dirname(path)
+            directory = parent if parent and os.path.isdir(parent) else None
+            file_value = ""
+            if not directory:
+                return
+        settings = QtCore.QSettings(SETTINGS_ORG, SETTINGS_APP)
+        settings.setValue(LAST_OPEN_DIR_KEY, directory)
+        if file_value:
+            settings.setValue(LAST_OPEN_FILE_KEY, file_value)
+        settings.sync()
+    except Exception:
+        pass
+
+
+def _resolve_start_dir(current_path):
+    """Ritorna la cartella iniziale per i dialog di load.
+
+    Usa il path corrente del widget se valido, altrimenti l'ultima
+    cartella aperta salvata in QSettings (persistente tra i riavvii).
+    """
+    try:
+        candidates = []
+        if isinstance(current_path, (list, tuple)):
+            candidates = list(current_path)
+        elif current_path:
+            candidates = [current_path]
+        for cand in candidates:
+            if cand and isinstance(cand, str):
+                if os.path.isfile(cand):
+                    parent = os.path.dirname(cand)
+                    if os.path.isdir(parent):
+                        return parent
+                elif os.path.isdir(cand):
+                    return cand
+    except Exception:
+        pass
+    return get_last_open_directory()
+
+
+# NOTE PySide2 Crash without QObject wrapper
+# @Slot()
+def _slot_browser_file(self):
+    filter_list = (
+        "File(%s)" % (" ".join(["*" + e for e in self.get_dayu_filters()]))
+        if self.get_dayu_filters()
+        else "Any File(*)"
+    )
+    start_dir = _resolve_start_dir(self.get_dayu_path())
+    if self.get_dayu_multiple():
+        r_files, _ = QtWidgets.QFileDialog.getOpenFileNames(self, "Browser File", start_dir, filter_list)
+        if r_files:
+            self.sig_files_changed.emit(r_files)
+            self.set_dayu_path(r_files[0])
+            remember_last_open_path(r_files)
+    else:
+        r_file, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Browser File", start_dir, filter_list)
+        if r_file:
+            self.sig_file_changed.emit(r_file)
+            self.set_dayu_path(r_file)
+            remember_last_open_path(r_file)
+
+
+# @Slot()
+def _slot_browser_folder(self):
+    start_dir = _resolve_start_dir(self.get_dayu_path())
+    r_folder = QtWidgets.QFileDialog.getExistingDirectory(self, "Browser Folder", start_dir)
+    if r_folder:
+        if self.get_dayu_multiple():
+            self.sig_folders_changed.emit([r_folder])
+        else:
+            self.sig_folder_changed.emit(r_folder)
+        self.set_dayu_path(r_folder)
+        remember_last_open_path(r_folder)
+
+
+# @Slot()
+# def _slot_save_file(self):
+#     filter_list = (
+#         "File(%s)" % (" ".join(["*" + e for e in self.get_dayu_filters()]))
+#         if self.get_dayu_filters()
+#         else "Any File(*)"
+#     )
+#     r_file, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save File", self.get_dayu_path(), filter_list)
+#     if r_file:
+#         self.sig_file_changed.emit(r_file)
+#         self.set_dayu_path(r_file)
+
+
+class MClickBrowserFilePushButton(MPushButton):
+    """A Clickable push button to browser files"""
+
+    sig_file_changed = QtCore.Signal(str)
+    sig_files_changed = QtCore.Signal(list)
+    slot_browser_file = _slot_browser_file
+
+    def __init__(self, text="Browser", multiple=False, parent=None):
+        super(MClickBrowserFilePushButton, self).__init__(text=text, parent=parent)
+        self.setProperty("multiple", multiple)
+        self.clicked.connect(self.slot_browser_file)
+        self.setToolTip(self.tr("Click to browser file"))
+
+        self._path = None
+        self._multiple = multiple
+        self._filters = []
+
+    def get_dayu_filters(self):
+        """
+        Get browser's format filters
+        :return: list
+        """
+        return self._filters
+
+    def set_dayu_filters(self, value):
+        """
+        Set browser file format filters
+        :param value:
+        :return: None
+        """
+        self._filters = value
+
+    def get_dayu_path(self):
+        """
+        Get last browser file path
+        :return: str
+        """
+        return self._path
+
+    def set_dayu_path(self, value):
+        """
+        Set browser file start path
+        :param value: str
+        :return: None
+        """
+        self._path = value
+
+    def get_dayu_multiple(self):
+        """
+        Get browser can select multiple file or not
+        :return: bool
+        """
+        return self._multiple
+
+    def set_dayu_multiple(self, value):
+        """
+        Set browser can select multiple file or not
+        :param value: bool
+        :return: None
+        """
+        self._multiple = value
+
+    dayu_multiple = QtCore.Property(bool, get_dayu_multiple, set_dayu_multiple)
+    dayu_path = QtCore.Property(six.string_types[0], get_dayu_path, set_dayu_path)
+    dayu_filters = QtCore.Property(list, get_dayu_filters, set_dayu_filters)
+
+
+class MClickBrowserFileToolButton(MToolButton):
+    """A Clickable tool button to browser files"""
+
+    sig_file_changed = QtCore.Signal(str)
+    sig_files_changed = QtCore.Signal(list)
+    slot_browser_file = _slot_browser_file
+
+    def __init__(self, multiple=False, parent=None):
+        super(MClickBrowserFileToolButton, self).__init__(parent=parent)
+        self.set_dayu_svg("cloud_line.svg")
+        self.icon_only()
+        self.clicked.connect(self.slot_browser_file)
+        self.setToolTip(self.tr("Click to browser file"))
+
+        self._path = None
+        self._multiple = multiple
+        self._filters = []
+
+    def get_dayu_filters(self):
+        """
+        Get browser's format filters
+        :return: list
+        """
+        return self._filters
+
+    def set_dayu_filters(self, value):
+        """
+        Set browser file format filters
+        :param value:
+        :return: None
+        """
+        self._filters = value
+
+    def get_dayu_path(self):
+        """
+        Get last browser file path
+        :return: str
+        """
+        return self._path
+
+    def set_dayu_path(self, value):
+        """
+        Set browser file start path
+        :param value: str
+        :return: None
+        """
+        self._path = value
+
+    def get_dayu_multiple(self):
+        """
+        Get browser can select multiple file or not
+        :return: bool
+        """
+        return self._multiple
+
+    def set_dayu_multiple(self, value):
+        """
+        Set browser can select multiple file or not
+        :param value: bool
+        :return: None
+        """
+        self._multiple = value
+
+    dayu_multiple = QtCore.Property(bool, get_dayu_multiple, set_dayu_multiple)
+    dayu_path = QtCore.Property(six.string_types[0], get_dayu_path, set_dayu_path)
+    dayu_filters = QtCore.Property(list, get_dayu_filters, set_dayu_filters)
+
+
+# Modified the Original Dayu Class
+class MClickSaveFileToolButton(MToolButton):
+    """A Clickable tool button to browse and save files"""
+
+    sig_file_changed = QtCore.Signal(str)
+    sig_save_with_choice = QtCore.Signal(str)
+
+    def __init__(self, file_types=None, parent=None):
+        super(MClickSaveFileToolButton, self).__init__(parent=parent)
+        self.set_dayu_svg("save.svg")
+        self.icon_only()
+        self.clicked.connect(self.slot_save_file)
+        self.setToolTip(self.tr("Click to save file"))
+
+        self._path = ""
+        self._file_types = file_types or []
+        self._last_used_filter = ""
+        self._last_directory = os.path.expanduser('~')
+        self._save_choice_handler = None
+
+    def set_save_choice_handler(self, handler):
+        self._save_choice_handler = handler
+
+    def get_file_types(self):
+        return self._file_types
+
+    def set_file_types(self, value):
+        self._file_types = value
+
+    def get_path(self):
+        return self._path
+
+    def set_path(self, value):
+        self._path = value
+        if value:
+            self._last_directory = os.path.dirname(value)
+
+    path = QtCore.Property(str, get_path, set_path)
+    file_types = QtCore.Property(list, get_file_types, set_file_types)
+
+    def _create_filter_string(self):
+        filter_parts = []
+        for file_type in self._file_types:
+            if isinstance(file_type[1], list):
+                extensions = " ".join(f"*.{ext}" for ext in file_type[1])
+                filter_parts.append(f"{file_type[0]} ({extensions})")
+            else:
+                filter_parts.append(f"{file_type[0]} (*.{file_type[1]})")
+        return ";;".join(filter_parts)
+
+    def _get_default_extension(self):
+        if self._file_types:
+            if isinstance(self._file_types[0][1], list):
+                return self._file_types[0][1][0]
+            return self._file_types[0][1]
+        return ""
+
+    def slot_save_file(self):
+        if self._save_choice_handler:
+            self.sig_save_with_choice.emit(self._get_suggested_filename())
+            return
+
+        self._do_show_save_dialog()
+
+    def trigger_save_dialog(self, suggested_filename=None):
+        self._do_show_save_dialog(suggested_filename)
+
+    def _get_suggested_filename(self):
+        filter_string = self._create_filter_string()
+
+        parent_widget = self
+        comic_translate = None
+        while parent_widget:
+            parent_widget = parent_widget.parent()
+            if parent_widget and hasattr(parent_widget, 'curr_img_idx') and hasattr(parent_widget, 'image_files'):
+                comic_translate = parent_widget
+                break
+
+        current_file = None
+        if comic_translate and comic_translate.curr_img_idx >= 0:
+            current_idx = comic_translate.curr_img_idx
+            if current_idx < len(comic_translate.image_files):
+                current_file = comic_translate.image_files[current_idx]
+
+        if current_file:
+            base_name = os.path.basename(current_file)
+            name_without_ext, original_ext = os.path.splitext(base_name)
+
+            if original_ext.startswith('.'):
+                original_ext = original_ext[1:]
+
+            supported_extensions = []
+            for file_type in self._file_types:
+                if isinstance(file_type[1], list):
+                    supported_extensions.extend(file_type[1])
+                else:
+                    supported_extensions.append(file_type[1])
+
+            if original_ext.lower() in [ext.lower() for ext in supported_extensions]:
+                default_name = f"{name_without_ext}.{original_ext}"
+            else:
+                default_name = f"{name_without_ext}.{self._get_default_extension()}"
+        else:
+            default_name = f"untitled.{self._get_default_extension()}"
+
+        return os.path.join(self._last_directory, default_name)
+
+    def _do_show_save_dialog(self, suggested_filename=None):
+        filter_string = self._create_filter_string()
+
+        if suggested_filename is None:
+            suggested_filename = self._get_suggested_filename()
+
+        file_name, selected_filter = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save File", suggested_filename, filter_string,
+            self._last_used_filter
+        )
+
+        if file_name:
+            self._last_used_filter = selected_filter
+            self._path = file_name
+            self._last_directory = os.path.dirname(file_name)
+
+            selected_type = next((ft for ft in self._file_types if ft[0] in selected_filter), None)
+            if selected_type:
+                valid_extensions = selected_type[1] if isinstance(selected_type[1], list) else [selected_type[1]]
+
+                file_base, file_extension = os.path.splitext(file_name)
+                if file_extension[1:].lower() not in valid_extensions:
+                    file_name = f"{file_base}.{valid_extensions[0]}"
+
+            self.sig_file_changed.emit(file_name)
+        else:
+            dialog = QtWidgets.QFileDialog()
+            self._last_directory = dialog.directory().absolutePath()
+
+class MDragFileButton(MToolButton):
+    """A Clickable and draggable tool button to upload files"""
+
+    sig_file_changed = QtCore.Signal(str)
+    sig_files_changed = QtCore.Signal(list)
+    slot_browser_file = _slot_browser_file
+
+    def __init__(self, text="", multiple=False, parent=None):
+        super(MDragFileButton, self).__init__(parent=parent)
+        self.setAcceptDrops(True)
+        self.setMouseTracking(True)
+        self.text_under_icon()
+        self.setText(text)
+        size = dayu_theme.drag_size
+        self.set_dayu_size(size)
+        self.setIconSize(QtCore.QSize(size, size))
+        self.set_dayu_svg("cloud_line.svg")
+
+        self.clicked.connect(self.slot_browser_file)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.setToolTip(self.tr("Click to browser file"))
+
+        self._path = None
+        self._multiple = multiple
+        self._filters = []
+
+    def get_dayu_filters(self):
+        """
+        Get browser's format filters
+        :return: list
+        """
+        return self._filters
+
+    def set_dayu_filters(self, value):
+        """
+        Set browser file format filters
+        :param value:
+        :return: None
+        """
+        self._filters = value
+
+    def get_dayu_path(self):
+        """
+        Get last browser file path
+        :return: str
+        """
+        return self._path
+
+    def set_dayu_path(self, value):
+        """
+        Set browser file start path
+        :param value: str
+        :return: None
+        """
+        self._path = value
+
+    def get_dayu_multiple(self):
+        """
+        Get browser can select multiple file or not
+        :return: bool
+        """
+        return self._multiple
+
+    def set_dayu_multiple(self, value):
+        """
+        Set browser can select multiple file or not
+        :param value: bool
+        :return: None
+        """
+        self._multiple = value
+
+    dayu_multiple = QtCore.Property(bool, get_dayu_multiple, set_dayu_multiple)
+    dayu_path = QtCore.Property(six.string_types[0], get_dayu_path, set_dayu_path)
+    dayu_filters = QtCore.Property(list, get_dayu_filters, set_dayu_filters)
+
+    def dragEnterEvent(self, event):
+        """Override dragEnterEvent. Validate dragged files"""
+        if event.mimeData().hasFormat("text/uri-list"):
+            file_list = self._get_valid_file_list(event.mimeData().urls())
+            count = len(file_list)
+            if count == 1 or (count > 1 and self.get_dayu_multiple()):
+                event.acceptProposedAction()
+                return
+
+    def dropEvent(self, event):
+        """Override dropEvent to accept the dropped files"""
+        file_list = self._get_valid_file_list(event.mimeData().urls())
+        if not file_list:
+            return
+        if self.get_dayu_multiple():
+            self.sig_files_changed.emit(file_list)
+            self.set_dayu_path(file_list[0] if file_list else None)
+        else:
+            self.sig_file_changed.emit(file_list[0])
+            self.set_dayu_path(file_list[0])
+        remember_last_open_path(file_list)
+
+    def _get_valid_file_list(self, url_list):
+        # Import built-in modules
+        import subprocess
+        import sys
+
+        file_list = []
+        for url in url_list:
+            file_name = url.toLocalFile()
+            if sys.platform == "darwin":
+                sub_process = subprocess.Popen(
+                    "osascript -e 'get posix path of posix file \"file://{}\" -- kthxbai'".format(file_name),
+                    stdout=subprocess.PIPE,
+                    shell=True,
+                )
+                # print sub_process.communicate()[0].strip()
+                file_name = sub_process.communicate()[0].strip()
+                sub_process.wait()
+
+            if os.path.isfile(file_name):
+                if self.get_dayu_filters():
+                    if os.path.splitext(file_name)[-1] in self.get_dayu_filters():
+                        file_list.append(file_name)
+                else:
+                    file_list.append(file_name)
+
+        return file_list
+
+
+class MClickBrowserFolderPushButton(MPushButton):
+    """A Clickable push button to browser folders"""
+
+    sig_folder_changed = QtCore.Signal(str)
+    sig_folders_changed = QtCore.Signal(list)
+    slot_browser_folder = _slot_browser_folder
+
+    def __init__(self, text="", multiple=False, parent=None):
+        super(MClickBrowserFolderPushButton, self).__init__(text=text, parent=parent)
+        self.setProperty("multiple", multiple)
+        self.clicked.connect(self.slot_browser_folder)
+        self.setToolTip(self.tr("Click to browser folder"))
+
+        self._path = None
+        self._multiple = multiple
+
+    def get_dayu_path(self):
+        """
+        Get last browser file path
+        :return: str
+        """
+        return self._path
+
+    def set_dayu_path(self, value):
+        """
+        Set browser file start path
+        :param value: str
+        :return: None
+        """
+        self._path = value
+
+    def get_dayu_multiple(self):
+        """
+        Get browser can select multiple file or not
+        :return: bool
+        """
+        return self._multiple
+
+    def set_dayu_multiple(self, value):
+        """
+        Set browser can select multiple file or not
+        :param value: bool
+        :return: None
+        """
+        self._multiple = value
+
+    dayu_multiple = QtCore.Property(bool, get_dayu_multiple, set_dayu_multiple)
+    dayu_path = QtCore.Property(six.string_types[0], get_dayu_path, set_dayu_path)
+
+
+@property_mixin
+class MClickBrowserFolderToolButton(MToolButton):
+    """A Clickable tool button to browser folders"""
+
+    sig_folder_changed = QtCore.Signal(str)
+    sig_folders_changed = QtCore.Signal(list)
+    slot_browser_folder = _slot_browser_folder
+
+    def __init__(self, multiple=False, parent=None):
+        super(MClickBrowserFolderToolButton, self).__init__(parent=parent)
+
+        self.set_dayu_svg("folder_line.svg")
+        self.icon_only()
+        self.clicked.connect(self.slot_browser_folder)
+        self.setToolTip(self.tr("Click to browser folder"))
+
+        self._path = None
+        self._multiple = multiple
+
+    def get_dayu_path(self):
+        """
+        Get last browser file path
+        :return: str
+        """
+        return self._path
+
+    def set_dayu_path(self, value):
+        """
+        Set browser file start path
+        :param value: str
+        :return: None
+        """
+        self._path = value
+
+    def get_dayu_multiple(self):
+        """
+        Get browser can select multiple file or not
+        :return: bool
+        """
+        return self._multiple
+
+    def set_dayu_multiple(self, value):
+        """
+        Set browser can select multiple file or not
+        :param value: bool
+        :return: None
+        """
+        self._multiple = value
+
+    dayu_multiple = QtCore.Property(bool, get_dayu_multiple, set_dayu_multiple)
+    dayu_path = QtCore.Property(six.string_types[0], get_dayu_path, set_dayu_path)
+
+
+@property_mixin
+@cursor_mixin
+class MDragFolderButton(MToolButton):
+    """A Clickable and draggable tool button to browser folders"""
+
+    sig_folder_changed = QtCore.Signal(str)
+    sig_folders_changed = QtCore.Signal(list)
+    slot_browser_folder = _slot_browser_folder
+
+    def __init__(self, multiple=False, parent=None):
+        super(MDragFolderButton, self).__init__(parent=parent)
+        self.setAcceptDrops(True)
+        self.setMouseTracking(True)
+        self.text_under_icon()
+        self.set_dayu_svg("folder_line.svg")
+        size = dayu_theme.drag_size
+        self.set_dayu_size(size)
+        self.setIconSize(QtCore.QSize(size, size))
+        self.setText(self.tr("Click or drag folder here"))
+        self.clicked.connect(self.slot_browser_folder)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.setToolTip(self.tr("Click to browser folder or drag folder here"))
+
+        self._path = None
+        self._multiple = multiple
+
+    def get_dayu_path(self):
+        """
+        Get last browser file path
+        :return: str
+        """
+        return self._path
+
+    def set_dayu_path(self, value):
+        """
+        Set browser file start path
+        :param value: str
+        :return: None
+        """
+        self._path = value
+
+    def get_dayu_multiple(self):
+        """
+        Get browser can select multiple file or not
+        :return: bool
+        """
+        return self._multiple
+
+    def set_dayu_multiple(self, value):
+        """
+        Set browser can select multiple file or not
+        :param value: bool
+        :return: None
+        """
+        self._multiple = value
+
+    dayu_multiple = QtCore.Property(bool, get_dayu_multiple, set_dayu_multiple)
+    dayu_path = QtCore.Property(bool, get_dayu_path, set_dayu_path)
+
+    def dragEnterEvent(self, event):
+        """Override dragEnterEvent. Validate dragged folders"""
+        if event.mimeData().hasFormat("text/uri-list"):
+            folder_list = [url.toLocalFile() for url in event.mimeData().urls() if os.path.isdir(url.toLocalFile())]
+            count = len(folder_list)
+            if count == 1 or (count > 1 and self.get_dayu_multiple()):
+                event.acceptProposedAction()
+                return
+
+    def dropEvent(self, event):
+        """Override dropEvent to accept the dropped folders"""
+        folder_list = [url.toLocalFile() for url in event.mimeData().urls() if os.path.isdir(url.toLocalFile())]
+        if not folder_list:
+            return
+        if self.get_dayu_multiple():
+            self.sig_folders_changed.emit(folder_list)
+        else:
+            self.sig_folder_changed.emit(folder_list[0])
+        self.set_dayu_path(folder_list[0])
+        remember_last_open_path(folder_list)

@@ -1,0 +1,195 @@
+import numpy as np
+from PySide6.QtGui import QUndoCommand
+from PySide6.QtCore import QRectF, QPointF
+
+from modules.detection import get_inpaint_bboxes
+from .base import RectCommandBase
+from ..canvas.polygon_overlay import remove_polygon_overlay
+from ..canvas.rectangle import MoveableRectItem, MoveableEllipseItem
+from ..canvas.text_item import TextBlockItem
+
+
+class AddRectangleCommand(QUndoCommand, RectCommandBase):
+    def __init__(self, main_page, rect_item, blk, blk_list):
+        super().__init__()
+        self.viewer = main_page.image_viewer
+        self.scene = self.viewer._scene
+        self.photo = self.viewer.photo
+        self.blk_list = blk_list
+        self.rect_properties = self.save_rect_properties(rect_item)
+        self.blk_properties = self.save_blk_properties(blk)
+
+    def redo(self):
+        if not self.find_matching_rect(self.scene, self.rect_properties):
+            rect_item = self.create_rect_item(self.rect_properties, self.viewer.photo)
+            self.viewer.connect_rect_item.emit(rect_item)
+            self.viewer.rectangles.append(rect_item)
+
+        if not self.find_matching_blk(self.blk_list, self.blk_properties):
+            blk = self.create_new_blk(self.blk_properties)
+            self.blk_list.append(blk)
+
+    def undo(self):
+        matching_item = self.find_matching_rect(self.scene, self.rect_properties)
+        matching_blk = self.find_matching_blk(self.blk_list, self.blk_properties)
+
+        if matching_item:
+            remove_polygon_overlay(matching_item, self.viewer)
+            self.scene.removeItem(matching_item)
+            self.viewer.rectangles.remove(matching_item)
+
+        if matching_blk:
+            self.blk_list.remove(matching_blk)
+
+
+class BoxesChangeCommand(QUndoCommand, RectCommandBase):
+    def __init__(self, viewer, old_state, new_state, blk_list):
+        super().__init__()
+        self.viewer = viewer
+        self.scene = self.viewer._scene
+        self.blk_list = blk_list
+
+        self.old_xyxy = None
+        self.old_angle = None
+        self.old_tr_origin = None
+        if old_state is not None and hasattr(old_state, 'rect'):
+            self.old_xyxy = [int(c) for c in old_state.rect]
+            self.old_angle = old_state.rotation
+            self.old_tr_origin = (old_state.transform_origin.x(), old_state.transform_origin.y())
+
+        self.new_xyxy = None
+        self.new_angle = None
+        self.new_tr_origin = None
+        if new_state is not None and hasattr(new_state, 'rect'):
+            self.new_xyxy = [int(c) for c in new_state.rect]
+            self.new_angle = new_state.rotation
+            self.new_tr_origin = (new_state.transform_origin.x(), new_state.transform_origin.y())
+
+    def redo(self):
+        if (self.old_xyxy is None or self.new_xyxy is None or 
+            self.old_angle is None or self.new_angle is None):
+            return
+
+        for blk in self.blk_list:
+            if (np.array_equal(blk.xyxy, self.old_xyxy) and blk.angle == self.old_angle):
+                blk.xyxy[:] = self.new_xyxy
+                blk.angle = self.new_angle
+                blk.tr_origin_point = self.new_tr_origin
+                image = self.viewer.get_cv2_image()
+                bubble_bbox = (
+                    blk.get_active_inpaint_bbox() if hasattr(blk, "get_active_inpaint_bbox") else getattr(blk, "bubble_xyxy", None)
+                )
+                bubble_polygon = (
+                    blk.get_active_inpaint_polygon() if hasattr(blk, "get_active_inpaint_polygon") else getattr(blk, "polygon_points", None)
+                )
+                inpaint_bboxes = get_inpaint_bboxes(
+                    blk.xyxy,
+                    image,
+                    bubble_bbox,
+                    bubble_polygon,
+                )
+                blk.inpaint_bboxes = inpaint_bboxes
+
+                self.find_and_update_item(
+                    self.scene,
+                    self.old_xyxy,
+                    self.old_angle,
+                    self.new_xyxy,
+                    self.new_angle,
+                    self.new_tr_origin,
+                )
+                self.scene.update()
+
+    def undo(self):
+        if (self.old_xyxy is None or self.new_xyxy is None or 
+            self.old_angle is None or self.new_angle is None):
+            return
+
+        for blk in self.blk_list:
+            if (np.array_equal(blk.xyxy, self.new_xyxy) and blk.angle == self.new_angle):
+                blk.xyxy[:] = self.old_xyxy
+                blk.angle = self.old_angle
+                blk.tr_origin_point = self.old_tr_origin
+                image = self.viewer.get_cv2_image()
+                bubble_bbox = (
+                    blk.get_active_inpaint_bbox() if hasattr(blk, "get_active_inpaint_bbox") else getattr(blk, "bubble_xyxy", None)
+                )
+                bubble_polygon = (
+                    blk.get_active_inpaint_polygon() if hasattr(blk, "get_active_inpaint_polygon") else getattr(blk, "polygon_points", None)
+                )
+                inpaint_bboxes = get_inpaint_bboxes(
+                    blk.xyxy,
+                    image,
+                    bubble_bbox,
+                    bubble_polygon,
+                )
+                blk.inpaint_bboxes = inpaint_bboxes
+
+                self.find_and_update_item(
+                    self.scene,
+                    self.new_xyxy,
+                    self.new_angle,
+                    self.old_xyxy,
+                    self.old_angle,
+                    self.old_tr_origin,
+                )
+                self.scene.update()
+
+    @staticmethod
+    def find_and_update_item(scene, old_xyxy, old_angle, new_xyxy, new_angle, new_tr_origin):
+        for item in scene.items():
+            if (
+                isinstance(item, (MoveableRectItem, MoveableEllipseItem, TextBlockItem))
+                and int(item.pos().x()) == int(old_xyxy[0])
+                and int(item.pos().y()) == int(old_xyxy[1])
+                and int(item.rotation()) == int(old_angle)
+            ):
+                new_width = new_xyxy[2] - new_xyxy[0]
+                new_height = new_xyxy[3] - new_xyxy[1]
+
+                if isinstance(item, (MoveableRectItem, MoveableEllipseItem)):
+                    rect = QRectF(0, 0, new_width, new_height)
+                    item.setRect(rect)
+
+                item.setTransformOriginPoint(QPointF(*new_tr_origin))
+                item.setPos(new_xyxy[0], new_xyxy[1])
+                item.setRotation(new_angle)
+
+
+class ClearRectsCommand(QUndoCommand, RectCommandBase):
+    def __init__(self, viewer):
+        super().__init__()
+        self.viewer = viewer
+        self.scene = viewer._scene
+        self.photo = viewer.photo
+        self.properties_list = []
+
+    def undo(self):
+        for properties in self.properties_list:
+            rect_item = self.create_rect_item(properties, self.viewer.photo)
+            self.viewer.connect_rect_item.emit(rect_item)
+            self.viewer.rectangles.append(rect_item)
+        try:
+            from controller import ComicTranslate
+
+            main_page = self.viewer.parent()
+            while main_page and not isinstance(main_page, ComicTranslate):
+                main_page = main_page.parent()
+
+            if main_page and hasattr(main_page, "font_size_dropdown"):
+                font_size = float(str(main_page.font_size_dropdown.currentText()).replace(',', '.'))
+                self.viewer.update_all_markers(font_size=font_size)
+        except Exception as e:
+            print(f"[WARNING] Errore aggiornamento markers: {str(e)}")
+        self.scene.update()
+
+    def redo(self):
+        self.properties_list = []
+        for item in self.scene.items():
+            if isinstance(item, (MoveableRectItem, MoveableEllipseItem)) and item != self.photo:
+                self.properties_list.append(self.save_rect_properties(item))
+                remove_polygon_overlay(item, self.viewer)
+                self.scene.removeItem(item)
+                self.viewer.selected_rect = None
+        self.viewer.clear_rect_item_markers()
+        self.scene.update()

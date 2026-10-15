@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Env
+.venv/
+venv/
+
+# Pesi / artefatti locali (mai su git, la CI li riscarica)
+models/
+Backups/
+dist/
+build/
+logs/
+_tmp/
+wheels/
+*.exe
+*.zip
+
+# Rust
+rs_core/target/
+
+# OS
+.DS_Store
+Thumbs.db
